@@ -89,8 +89,121 @@ hipError_t ihipStreamCreate(TlsData *tls, hipStream_t* stream, unsigned int flag
         e = hipErrorInvalidDevice;
     }
 
+
     return e;
 }
+
+//---
+hipError_t ihipStreamCreateWithMask(TlsData *tls, hipStream_t* stream, long mask, unsigned int flags, int priority) {
+    ihipCtx_t* ctx = ihipGetTlsDefaultCtx();
+
+    hipError_t e = hipSuccess;
+
+    if (ctx) {
+        if (HIP_FORCE_NULL_STREAM) {
+            *stream = 0;
+        } else if( NULL == stream ){
+            e = hipErrorInvalidValue;
+        } else {
+            hc::accelerator acc = ctx->getWriteableDevice()->_acc;
+
+            // TODO - se try-catch loop to detect memory exception?
+            //
+            // Note this is an execute_any_order queue, 
+            // CUDA stream behavior is that all kernels submitted will automatically
+            // wait for prev to complete, this behaviour will be mainatined by 
+            // hipModuleLaunchKernel. execute_any_order will help 
+	    // hipExtModuleLaunchKernel , which uses a special flag
+
+            {
+                // Obtain mutex access to the device critical data, release by destructor
+                LockedAccessor_CtxCrit_t ctxCrit(ctx->criticalData());
+
+#if defined(__HCC__) && (__hcc_major__ < 3) && (__hcc_minor__ < 3)
+                auto istream = new ihipStream_t(ctx, acc.create_view(), flags);
+#else
+                auto istream = new ihipStream_t(ctx, acc.create_view(Kalmar::execute_any_order, Kalmar::queuing_mode_automatic, (Kalmar::queue_priority)priority), flags);
+#endif
+
+                ctxCrit->addStream(istream);
+                *stream = istream;
+            }
+            tprintf(DB_SYNC, "hipStreamCreate, %s\n", ToString(*stream).c_str());
+        }
+
+    } else {
+        e = hipErrorInvalidDevice;
+    }
+
+      printf("Test if ihipStreamCreate called \n");        //Test if function successfully called
+
+
+        std::vector<bool> boolArray;
+        bool alternate = true;
+        for (int i = 0; i < 56; i++){                   //loop to create alternating CU's, so half on, half off
+                boolArray.push_back(alternate);
+                alternate = !alternate;
+        }
+
+
+        (*stream)->locked_getAv()->set_cu_mask(boolArray);           //call to access locked_getAV
+                                //and set the mask      
+
+
+    return e;
+}
+
+
+hipError_t ihipStreamCreateWithFlags(TlsData *tls, hipStream_t* stream, unsigned int flags, int priority) {
+    ihipCtx_t* ctx = ihipGetTlsDefaultCtx();
+
+    hipError_t e = hipSuccess;
+
+    if (ctx) {
+        if (HIP_FORCE_NULL_STREAM) {
+            *stream = 0;
+        } else if( NULL == stream ){
+            e = hipErrorInvalidValue;
+        } else {
+            hc::accelerator acc = ctx->getWriteableDevice()->_acc;
+
+            // TODO - se try-catch loop to detect memory exception?
+            //
+            // Note this is an execute_any_order queue, 
+            // CUDA stream behavior is that all kernels submitted will automatically
+            // wait for prev to complete, this behaviour will be mainatined by 
+            // hipModuleLaunchKernel. execute_any_order will help 
+            // hipExtModuleLaunchKernel , which uses a special flag
+
+            {
+                // Obtain mutex access to the device critical data, release by destructor
+                LockedAccessor_CtxCrit_t ctxCrit(ctx->criticalData());
+
+#if defined(__HCC__) && (__hcc_major__ < 3) && (__hcc_minor__ < 3)
+                auto istream = new ihipStream_t(ctx, acc.create_view(), flags);
+#else
+                auto istream = new ihipStream_t(ctx, acc.create_view(Kalmar::execute_any_order, Kalmar::queuing_mode_automatic, (Kalmar::queue_priority)priority), flags);
+#endif
+
+                ctxCrit->addStream(istream);
+                *stream = istream;
+            }
+            tprintf(DB_SYNC, "hipStreamCreate, %s\n", ToString(*stream).c_str());
+        }
+
+    } else {
+        e = hipErrorInvalidDevice;
+    }
+
+
+
+    return e;
+}
+
+
+
+
+
 
 
 //---
@@ -108,6 +221,15 @@ hipError_t hipStreamCreate(hipStream_t* stream) {
 
     return ihipLogStatus(ihipStreamCreate(tls, stream, hipStreamDefault, priority_normal));
 }
+
+
+hipError_t hipStreamCreateWithMask(hipStream_t* stream,long mask) {
+    HIP_INIT_API(hipStreamCreateWithMask, stream, mask);
+                                                                                                                        //Our Stream creation function with set Mask
+    return ihipLogStatus(ihipStreamCreateWithMask(tls, stream, mask, hipStreamDefault, priority_normal));
+}
+
+
 
 //---
 hipError_t hipStreamCreateWithPriority(hipStream_t* stream, unsigned int flags, int priority) {

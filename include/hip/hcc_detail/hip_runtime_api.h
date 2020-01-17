@@ -664,6 +664,15 @@ const char* hipGetErrorString(hipError_t hipError);
 hipError_t hipStreamCreate(hipStream_t* stream);
 
 
+
+
+
+
+hipError_t hipStreamCreateWithMask(hipStream_t* stream, long mask);  //Our function created to create a stream with a CU mask set
+	
+
+
+
 /**
  * @brief Create an asynchronous stream.
  *
