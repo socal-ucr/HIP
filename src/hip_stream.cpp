@@ -25,7 +25,7 @@ THE SOFTWARE.
 #include "hip/hip_runtime.h"
 #include "hip_hcc_internal.h"
 #include "trace_helper.h"
-
+#include <vector>
 
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ hipError_t ihipStreamCreate(TlsData *tls, hipStream_t* stream, unsigned int flag
 }
 
 //---
-hipError_t ihipStreamCreateWithMask(TlsData *tls, hipStream_t* stream, long mask, unsigned int flags, int priority) {
+hipError_t ihipStreamCreateWithMask(TlsData *tls, hipStream_t* stream, std::vector<bool> mask, unsigned int flags, int priority) {
     ihipCtx_t* ctx = ihipGetTlsDefaultCtx();
 
     hipError_t e = hipSuccess;
@@ -137,16 +137,18 @@ hipError_t ihipStreamCreateWithMask(TlsData *tls, hipStream_t* stream, long mask
 
       printf("Test if ihipStreamCreate called \n");        //Test if function successfully called
 
-
+	/*
         std::vector<bool> boolArray;
         bool alternate = true;
         for (int i = 0; i < 56; i++){                   //loop to create alternating CU's, so half on, half off
                 boolArray.push_back(alternate);
                 alternate = !alternate;
-        }
+        } */
+
+//	std::vector<bool> boolArray(64, false);
 
 
-        (*stream)->locked_getAv()->set_cu_mask(boolArray);           //call to access locked_getAV
+        (*stream)->locked_getAv()->set_cu_mask(mask);           //call to access locked_getAV
                                 //and set the mask      
 
 
@@ -223,7 +225,7 @@ hipError_t hipStreamCreate(hipStream_t* stream) {
 }
 
 
-hipError_t hipStreamCreateWithMask(hipStream_t* stream,long mask) {
+hipError_t hipStreamCreateWithMask(hipStream_t* stream,std::vector<bool> mask) {
     HIP_INIT_API(hipStreamCreateWithMask, stream, mask);
                                                                                                                         //Our Stream creation function with set Mask
     return ihipLogStatus(ihipStreamCreateWithMask(tls, stream, mask, hipStreamDefault, priority_normal));

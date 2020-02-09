@@ -63,6 +63,17 @@ inline std::string ToString(T v) {
     return ss.str();
 };
 
+template<>
+inline std::string ToString(std::vector<bool> v) {
+    std::ostringstream ss;
+
+    for (unsigned int i=0; i < v.size(); i++) {
+	ss << ' ' << v.at(i);
+    }
+
+    return ss.str();
+}
+
 
 //  hipEvent_t specialization. TODO - maybe add an event ID for debug?
 template <>

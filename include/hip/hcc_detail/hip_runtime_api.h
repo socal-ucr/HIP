@@ -30,6 +30,7 @@ THE SOFTWARE.
  */
 #include <stdint.h>
 #include <stddef.h>
+#include <vector>
 
 #ifndef GENERIC_GRID_LAUNCH
 #define GENERIC_GRID_LAUNCH 1
@@ -668,7 +669,7 @@ hipError_t hipStreamCreate(hipStream_t* stream);
 
 
 
-hipError_t hipStreamCreateWithMask(hipStream_t* stream, long mask);  //Our function created to create a stream with a CU mask set
+hipError_t hipStreamCreateWithMask(hipStream_t* stream, std::vector<bool> mask);  //Our function created to create a stream with a CU mask set
 	
 
 
