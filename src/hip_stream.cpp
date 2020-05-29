@@ -155,6 +155,124 @@ hipError_t ihipStreamCreateWithMask(TlsData *tls, hipStream_t* stream, std::vect
     return e;
 }
 
+void ihipStreamSetMask(hipStream_t *stream, std::vector<bool> mask){
+
+	 (*stream)->locked_getAv()->set_cu_mask(mask);
+
+	return;
+
+}
+
+
+void ihipStreamSetMaskByShader(hipStream_t *stream, std::vector<bool> mask){
+
+
+	std::vector<int> shaderIndexes;
+
+        for (int i = 0; i <=52; i+= 4){                 //shader 0
+                shaderIndexes.push_back(i);
+        }
+
+        for (int i = 1; i <= 53; i+= 4){                 //shader 1
+               shaderIndexes.push_back(i);                                                                                                                                                                                                   
+        }
+
+        for (int i = 2; i <= 54; i+=4){
+                shaderIndexes.push_back(i);            //shader 2.
+        }
+
+        for (int i = 3; i <= 55; i+=4){
+                shaderIndexes.push_back(i);             //shader 3
+        }
+
+        std::vector<bool> boolArray(64, false);
+
+        for(int i = 0; i < 56; i++){
+                boolArray.at(shaderIndexes.at(i)) = mask.at(i);
+        }
+
+
+        (*stream)->locked_getAv()->set_cu_mask(boolArray);           //call to access locked_getAV
+                                //and set the mask         
+	return;
+
+
+}
+
+
+
+hipError_t ihipStreamCreateWithShaderMask(TlsData *tls, hipStream_t* stream, std::vector<bool> mask, unsigned int flags, int priority) {
+    ihipCtx_t* ctx = ihipGetTlsDefaultCtx();
+
+    hipError_t e = hipSuccess;
+
+    if (ctx) {
+        if (HIP_FORCE_NULL_STREAM) {
+            *stream = 0;
+        } else if( NULL == stream ){
+            e = hipErrorInvalidValue;
+        } else {
+            hc::accelerator acc = ctx->getWriteableDevice()->_acc;
+
+            // TODO - se try-catch loop to detect memory exception?
+            //
+            // Note this is an execute_any_order queue,
+            // CUDA stream behavior is that all kernels submitted will automatically
+            // wait for prev to complete, this behaviour will be mainatined by                                                                                                                                                                           // hipModuleLaunchKernel. execute_any_order will help                                                                                                                                                                                        // hipExtModuleLaunchKernel , which uses a special flag
+
+            {
+                // Obtain mutex access to the device critical data, release by destructor
+                LockedAccessor_CtxCrit_t ctxCrit(ctx->criticalData());                                                                                                                                                                       
+#if defined(__HCC__) && (__hcc_major__ < 3) && (__hcc_minor__ < 3)
+                auto istream = new ihipStream_t(ctx, acc.create_view(), flags);
+#else
+                auto istream = new ihipStream_t(ctx, acc.create_view(Kalmar::execute_any_order, Kalmar::queuing_mode_automatic, (Kalmar::queue_priority)priority), flags);
+#endif
+                                                                                                                                                                                                                                                             ctxCrit->addStream(istream);
+                *stream = istream;                                                                                                                                                                                                                       }                                                                                                                                                                                                                                            tprintf(DB_SYNC, "hipStreamCreate, %s\n", ToString(*stream).c_str());
+        }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     } else {
+        e = hipErrorInvalidDevice;
+    }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           printf("Test if ihipStreamCreate called \n");        //Test if function successfully called
+                                                                                                                                                                                                                                                     /*
+        bool alternate = true;                                                                                                                                                                                                                       for (int i = 0; i < 56; i++){                   //loop to create alternating CU's, so half on, half off
+                boolArray.push_back(alternate);                                                                                                                                                                                                              alternate = !alternate;                                                                                                                                                                                                              } */
+
+
+	std::vector<int> shaderIndexes;
+	
+	for (int i = 0; i <=52; i+= 4){			//shader 0
+		shaderIndexes.push_back(i);
+	}
+
+	for (int i = 1; i <= 53; i+= 4){                 //shader 1 
+               shaderIndexes.push_back(i);                                                                                                                                                                                                          
+	}
+
+	for (int i = 2; i <= 54; i+=4){
+		shaderIndexes.push_back(i); 	       //shader 2.
+	}
+
+	for (int i = 3; i <= 55; i+=4){
+		shaderIndexes.push_back(i);		//shader 3
+	}
+
+	std::vector<bool> boolArray(64, false);
+
+	for(int i = 0; i < 56; i++){
+		boolArray.at(shaderIndexes.at(i)) = mask.at(i);
+	}
+	
+                                                                                                                                                                                                                                             
+        (*stream)->locked_getAv()->set_cu_mask(boolArray);           //call to access locked_getAV
+                                //and set the mask                                                                                                                                                                                                                                                                                                                                                                                                                                        
+    return e;
+}
+
+
+
+
+
+
 
 hipError_t ihipStreamCreateWithFlags(TlsData *tls, hipStream_t* stream, unsigned int flags, int priority) {
     ihipCtx_t* ctx = ihipGetTlsDefaultCtx();
@@ -230,6 +348,34 @@ hipError_t hipStreamCreateWithMask(hipStream_t* stream,std::vector<bool> mask) {
                                                                                                                         //Our Stream creation function with set Mask
     return ihipLogStatus(ihipStreamCreateWithMask(tls, stream, mask, hipStreamDefault, priority_normal));
 }
+
+
+hipError_t hipStreamCreateWithShaderMask(hipStream_t* stream, std::vector<bool> mask) {
+    HIP_INIT_API(hipStreamCreateWithMask, stream, mask);
+                                                                                                                        //Our Stream creation function with set Mask
+    return ihipLogStatus(ihipStreamCreateWithShaderMask(tls, stream, mask, hipStreamDefault, priority_normal));
+}
+
+
+void hipStreamSetMask(hipStream_t* stream, std::vector<bool> mask) {
+    HIP_INIT_API(hipStreamSetMask, stream, mask);                                                              
+    return ihipStreamSetMask( stream, mask);
+}
+
+void hipStreamSetMaskByShader(hipStream_t* stream, std::vector<bool> mask) { 
+    HIP_INIT_API(hipStreamSetMask, stream, mask);
+    return (ihipStreamSetMaskByShader( stream, mask));                                                                                                                                           }
+
+
+hipError_t hipDeviceGetStreamPriorityRange(int* leastPriority, int* greatestPriority) {
+    HIP_INIT_API(hipDeviceGetStreamPriorityRange, leastPriority, greatestPriority);                                                                                                                                                          
+    if (leastPriority != NULL) *leastPriority = priority_low;
+    if (greatestPriority != NULL) *greatestPriority = priority_high;
+    return ihipLogStatus(hipSuccess);
+}
+
+
+
 
 
 
