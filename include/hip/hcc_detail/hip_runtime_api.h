@@ -779,6 +779,11 @@ hipError_t hipStreamCreate(hipStream_t* stream);
 hipError_t hipStreamCreateWithMask(hipStream_t* stream, std::vector<bool> mask);  //Our function created to create a stream with a CU mask set
 	
 
+hipError_t hipStreamCreateWithShaderMask(hipStream_t* stream, std::vector<bool> mask);	//Our second function added in order to control by Shader
+
+
+void hipStreamSetMask(hipStream_t* stream, std::vector<bool> mask);
+void hipStreamSetMaskByShader(hipStream_t* stream, std::vector<bool> mask);
 
 
 /**
